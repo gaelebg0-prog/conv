@@ -1,0 +1,7 @@
+{
+  "name": "OmniConvert AI",
+  "description": "A smart file conversion and processing platform powered by Gemini AI. Convert images, process text, and get AI-driven insights from your files.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
