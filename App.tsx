@@ -25,7 +25,6 @@ const App: React.FC = () => {
 
     setFiles(prev => [...prev, ...newItems]);
 
-    // Automatically trigger AI analysis
     newItems.forEach(async (item) => {
       setFiles(prev => prev.map(f => f.id === item.id ? { ...f, status: FileStatus.ANALYZING } : f));
       
@@ -62,37 +61,26 @@ const App: React.FC = () => {
 
   const handleConvert = async (id: string, format: string, quality?: number) => {
     setFiles(prev => prev.map(f => f.id === id ? { ...f, status: FileStatus.CONVERTING } : f));
-    
     try {
       const item = files.find(f => f.id === id);
       if (!item) return;
-
       let blob: Blob;
       if (SUPPORTED_IMAGE_FORMATS.includes(item.file.type)) {
         blob = await convertImage(item.file, format, quality);
       } else {
         blob = await convertText(item.file, format);
       }
-
-      setFiles(prev => prev.map(f => f.id === id ? { 
-        ...f, 
-        status: FileStatus.COMPLETED,
-        outputFormat: format,
-        convertedBlob: blob
-      } : f));
+      setFiles(prev => prev.map(f => f.id === id ? { ...f, status: FileStatus.COMPLETED, outputFormat: format, convertedBlob: blob } : f));
     } catch (error) {
-      console.error(error);
       setFiles(prev => prev.map(f => f.id === id ? { ...f, status: FileStatus.ERROR } : f));
     }
   };
 
   const handleTranslate = async (id: string, language: string) => {
     setFiles(prev => prev.map(f => f.id === id ? { ...f, status: FileStatus.TRANSLATING } : f));
-    
     try {
       const item = files.find(f => f.id === id);
       if (!item) return;
-
       let fileData: string | undefined;
       if (SUPPORTED_IMAGE_FORMATS.includes(item.file.type)) {
         fileData = await new Promise<string>((resolve) => {
@@ -101,43 +89,27 @@ const App: React.FC = () => {
           reader.readAsDataURL(item.file);
         });
       }
-
       const translation = await translateFile(item.file, language, fileData);
-      
-      setFiles(prev => prev.map(f => f.id === id ? { 
-        ...f, 
-        status: FileStatus.IDLE,
-        translationResult: translation
-      } : f));
+      setFiles(prev => prev.map(f => f.id === id ? { ...f, status: FileStatus.IDLE, translationResult: translation } : f));
     } catch (error) {
-      console.error(error);
       setFiles(prev => prev.map(f => f.id === id ? { ...f, status: FileStatus.ERROR } : f));
     }
   };
 
   const handleApplyEffects = async (id: string, radius: number, enhance: boolean) => {
     setFiles(prev => prev.map(f => f.id === id ? { ...f, status: FileStatus.PROCESSING } : f));
-    
     try {
       const item = files.find(f => f.id === id);
       if (!item) return;
-
       const blob = await applyImageEffects(item.file, radius, enhance);
-      
-      setFiles(prev => prev.map(f => f.id === id ? { 
-        ...f, 
-        status: FileStatus.COMPLETED,
-        outputFormat: 'png',
-        convertedBlob: blob
-      } : f));
+      setFiles(prev => prev.map(f => f.id === id ? { ...f, status: FileStatus.COMPLETED, outputFormat: 'png', convertedBlob: blob } : f));
     } catch (error) {
-      console.error(error);
       setFiles(prev => prev.map(f => f.id === id ? { ...f, status: FileStatus.ERROR } : f));
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-white text-black selection:bg-black selection:text-white">
       <Header />
       
       {isCameraOpen && (
@@ -147,11 +119,34 @@ const App: React.FC = () => {
         />
       )}
 
-      <main className="flex-grow max-w-5xl mx-auto w-full px-4 py-12">
-        {/* Upload Zone */}
-        <section 
-          className={`relative group border-2 border-dashed rounded-3xl p-12 text-center transition-all ${
-            isDragging ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 bg-white hover:border-indigo-300 shadow-sm'
+      <main className="max-w-4xl mx-auto w-full px-6 py-20">
+        <section className="text-center mb-20 animate-in fade-in duration-1000">
+          <h2 className="text-5xl md:text-7xl font-extrabold tracking-tighter mb-6">
+            Optimisez vos fichiers <br className="hidden md:block"/> instantanément.
+          </h2>
+          <p className="text-slate-500 text-lg md:text-xl font-medium max-w-2xl mx-auto mb-10 leading-relaxed">
+            Convertissez, traduisez et améliorez vos images localement. <br/>Simple, rapide et privé.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+             <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full sm:w-auto px-10 py-3.5 bg-black text-white rounded-md text-sm font-bold hover:bg-slate-800 transition shadow-xl"
+            >
+              Importer des fichiers
+            </button>
+            <button 
+              onClick={() => setIsCameraOpen(true)}
+              className="w-full sm:w-auto px-10 py-3.5 bg-white text-black border border-slate-200 rounded-md text-sm font-bold hover:bg-slate-50 transition"
+            >
+              Scanner un document
+            </button>
+          </div>
+        </section>
+
+        <div 
+          className={`border-2 border-dashed rounded-xl p-16 transition-all duration-300 ${
+            isDragging ? 'border-black bg-slate-50 scale-[1.02]' : 'border-slate-200 bg-white'
           }`}
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
           onDragLeave={() => setIsDragging(false)}
@@ -161,62 +156,22 @@ const App: React.FC = () => {
             onFilesSelected(e.dataTransfer.files);
           }}
         >
-          <input 
-            type="file" 
-            multiple 
-            className="hidden" 
-            ref={fileInputRef}
-            onChange={(e) => onFilesSelected(e.target.files)}
-          />
-          
+          <input type="file" multiple className="hidden" ref={fileInputRef} onChange={(e) => onFilesSelected(e.target.files)} />
           <div className="flex flex-col items-center">
-            <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-2">OmniProcess your files</h2>
-            <p className="text-slate-500 mb-6 max-w-md mx-auto text-sm leading-relaxed">
-              Convert, translate, and enhance your files instantly. Powered by Gemini AI with high-speed client-side processing.
-            </p>
-            
-            <div className="flex flex-wrap justify-center gap-4">
-              <button 
-                onClick={() => fileInputRef.current?.click()}
-                className="px-8 py-3 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition shadow-lg active:scale-95 flex items-center space-x-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                <span>Select Files</span>
-              </button>
-              
-              <button 
-                onClick={() => setIsCameraOpen(true)}
-                className="px-8 py-3 bg-white text-indigo-600 border-2 border-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition shadow-sm active:scale-95 flex items-center space-x-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                <span>Take Photo</span>
-              </button>
-            </div>
+            <svg width="40" height="40" viewBox="0 0 76 65" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-4 text-slate-300">
+              <path d="M37.5274 0L75.0548 65H0L37.5274 0Z" fill="currentColor"/>
+            </svg>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Déposez vos fichiers pour commencer</p>
           </div>
-        </section>
+        </div>
 
-        {/* Processing Queue */}
-        {files.length > 0 && (
-          <section className="mt-16 space-y-6">
-            <div className="flex items-center justify-between px-2">
-              <h2 className="text-lg font-bold text-slate-800 flex items-center space-x-2">
-                <span>Active Queue</span>
-                <span className="bg-slate-200 text-slate-600 px-2 py-0.5 rounded text-xs font-bold uppercase">{files.length}</span>
-              </h2>
-              <button 
-                onClick={() => setFiles([])}
-                className="text-sm font-medium text-slate-400 hover:text-slate-600"
-              >
-                Clear All
-              </button>
-            </div>
-            
-            <div className="grid gap-4">
+        <div className="mt-20 space-y-12">
+          {files.length > 0 ? (
+            <div className="grid gap-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">File System ({files.length})</h3>
+                <button onClick={() => setFiles([])} className="text-[10px] font-bold text-red-500 hover:underline uppercase tracking-widest">Tout effacer</button>
+              </div>
               {files.map(item => (
                 <FileCard 
                   key={item.id} 
@@ -228,39 +183,34 @@ const App: React.FC = () => {
                 />
               ))}
             </div>
-          </section>
-        )}
-
-        {/* Info Blocks */}
-        {files.length === 0 && (
-          <section className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm transition hover:shadow-md">
-              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 mb-4">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left py-10 border-t border-slate-100">
+              <div>
+                <h4 className="text-[11px] font-bold uppercase tracking-widest text-black mb-3">01. Confidentialité</h4>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">Les conversions d'images se font directement dans votre navigateur.</p>
               </div>
-              <h3 className="font-bold text-slate-800 mb-2">Smart Effects</h3>
-              <p className="text-sm text-slate-600 leading-relaxed">Round corners for UI design or enhance clarity with our local AI-powered filters instantly.</p>
-            </div>
-            <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm transition hover:shadow-md">
-              <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 mb-4">
-                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" /></svg>
+              <div>
+                <h4 className="text-[11px] font-bold uppercase tracking-widest text-black mb-3">02. Puissance IA</h4>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">Gemini analyse et traduit vos textes avec une précision de pointe.</p>
               </div>
-              <h3 className="font-bold text-slate-800 mb-2">AI Translation</h3>
-              <p className="text-sm text-slate-600 leading-relaxed">Extract and translate text from any image or document using Gemini's advanced multimodal models.</p>
-            </div>
-            <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm transition hover:shadow-md">
-              <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 mb-4">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+              <div>
+                <h4 className="text-[11px] font-bold uppercase tracking-widest text-black mb-3">03. Design Moderne</h4>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">Optimisez vos visuels avec des bords arrondis et une qualité pro.</p>
               </div>
-              <h3 className="font-bold text-slate-800 mb-2">Bulk Conversion</h3>
-              <p className="text-sm text-slate-600 leading-relaxed">Drag multiple files and convert them to PNG, WebP, JPEG or PDF-compatible formats in seconds.</p>
             </div>
-          </section>
-        )}
+          )}
+        </div>
       </main>
 
-      <footer className="py-8 text-center text-slate-400 text-sm border-t border-slate-200 bg-white">
-        <p>© {new Date().getFullYear()} OmniConvert AI. Built with privacy in mind.</p>
+      <footer className="py-20 border-t border-slate-100 mt-20">
+        <div className="max-w-4xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          <div className="flex items-center space-x-6 mb-6 md:mb-0">
+             <a href="#" className="hover:text-black transition">Status</a>
+             <a href="#" className="hover:text-black transition">Support</a>
+             <a href="#" className="hover:text-black transition">Sécurité</a>
+          </div>
+          <div>© {new Date().getFullYear()} OmniConvert AI Platform</div>
+        </div>
       </footer>
     </div>
   );
